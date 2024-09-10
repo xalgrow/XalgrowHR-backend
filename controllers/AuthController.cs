@@ -3,65 +3,110 @@ using Microsoft.IdentityModel.Tokens;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Text;
+using Microsoft.Extensions.Configuration;
+using System;
+using System.Threading.Tasks;
+using XalgrowHR.Models;
+using XalgrowHR.Services;
 
-[Route("api/[controller]")]
 [ApiController]
+[Route("api/[controller]")]
 public class AuthController : ControllerBase
 {
-    private readonly IConfiguration _config;
+    private readonly UserService _userService; // Handles user-related DB operations
+    private readonly IConfiguration _configuration;
 
-    public AuthController(IConfiguration config)
+    public AuthController(UserService userService, IConfiguration configuration)
     {
-        _config = config;
+        _userService = userService;
+        _configuration = configuration;
     }
 
+    // DTO for user login
     public class UserLoginDto
     {
         public string Username { get; set; }
         public string Password { get; set; }
     }
 
+    // DTO for user registration
+    public class RegisterModel
+    {
+        public string Username { get; set; }
+        public string Email { get; set; }
+        public string Password { get; set; }
+    }
+
+    // POST: api/auth/login
     [HttpPost("login")]
-    public IActionResult Login([FromBody] UserLoginDto user)
+    public async Task<IActionResult> Login([FromBody] UserLoginDto user)
     {
         if (user == null || string.IsNullOrEmpty(user.Username) || string.IsNullOrEmpty(user.Password))
         {
-            return BadRequest("Username or Password is missing.");
+            return BadRequest(new { message = "Username and Password are required." });
         }
 
-        if (IsValidUser(user))
+        var authenticatedUser = await _userService.AuthenticateUser(user.Username, user.Password);
+        if (authenticatedUser == null)
         {
-            var token = GenerateJWT(user.Username);
-            return Ok(new { token });
+            return Unauthorized(new { message = "Invalid username or password." });
         }
 
-        return Unauthorized();
+        var token = GenerateJwtToken(authenticatedUser);
+        return Ok(new { token });
     }
 
-    private bool IsValidUser(UserLoginDto user)
+    // POST: api/auth/register
+    [HttpPost("register")]
+    public async Task<IActionResult> Register([FromBody] RegisterModel model)
     {
-        // Replace this with real user authentication logic (e.g., check a database)
-        return user.Username == "poweruser" && user.Password == "password";
+        if (model == null || string.IsNullOrEmpty(model.Username) || string.IsNullOrEmpty(model.Email) || string.IsNullOrEmpty(model.Password))
+        {
+            return BadRequest(new { message = "All fields are required." });
+        }
+
+        var userRegistered = await _userService.RegisterUser(model.Username, model.Email, model.Password);
+        if (userRegistered)
+        {
+            return Ok(new { message = "User registered successfully." });
+        }
+
+        return BadRequest(new { message = "Username or email already exists." });
     }
 
-    private string GenerateJWT(string username)
+    // Private method to generate JWT token
+    private string GenerateJwtToken(User user)
     {
-        var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_config["Jwt:Key"]));
-        var creds = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
+        if (user == null || string.IsNullOrEmpty(user.Username) || user.Id == 0)
+        {
+            throw new ArgumentNullException(nameof(user), "User information is missing or invalid.");
+        }
+
+        var tokenHandler = new JwtSecurityTokenHandler();
+        var key = _configuration["Jwt:Key"];
+        
+        if (string.IsNullOrEmpty(key))
+        {
+            throw new InvalidOperationException("JWT Key is missing in the configuration.");
+        }
+
+        var keyBytes = Encoding.ASCII.GetBytes(key);
 
         var claims = new[]
         {
-            new Claim(ClaimTypes.Name, username),
-            new Claim(ClaimTypes.Role, "PowerUser") // Replace with actual role fetching logic if needed
+            new Claim(ClaimTypes.Name, user.Username),
+            new Claim(ClaimTypes.NameIdentifier, user.Id.ToString()),
+            new Claim(ClaimTypes.Role, user.Role ?? "User") // Default to "User" role if null
         };
 
-        var token = new JwtSecurityToken(
-            issuer: _config["Jwt:Issuer"],
-            audience: _config["Jwt:Audience"],
-            claims: claims,
-            expires: DateTime.Now.AddMinutes(120),  // Adjust expiration as needed
-            signingCredentials: creds);
+        var tokenDescriptor = new SecurityTokenDescriptor
+        {
+            Subject = new ClaimsIdentity(claims),
+            Expires = DateTime.UtcNow.AddHours(1),
+            SigningCredentials = new SigningCredentials(new SymmetricSecurityKey(keyBytes), SecurityAlgorithms.HmacSha256Signature)
+        };
 
-        return new JwtSecurityTokenHandler().WriteToken(token);
+        var token = tokenHandler.CreateToken(tokenDescriptor);
+        return tokenHandler.WriteToken(token);
     }
 }

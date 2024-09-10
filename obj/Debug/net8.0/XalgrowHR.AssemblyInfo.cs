@@ -13,7 +13,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("XalgrowHR")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+dd8abd5fc9c0c958b2c3517af7cf8069b6014ee1")]
 [assembly: System.Reflection.AssemblyProductAttribute("XalgrowHR")]
 [assembly: System.Reflection.AssemblyTitleAttribute("XalgrowHR")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]

@@ -111,3 +111,5 @@ c:\XalgrowHR\XalgrowHR\obj\Debug\net8.0\refint\XalgrowHR.dll
 c:\XalgrowHR\XalgrowHR\obj\Debug\net8.0\XalgrowHR.pdb
 c:\XalgrowHR\XalgrowHR\obj\Debug\net8.0\XalgrowHR.genruntimeconfig.cache
 c:\XalgrowHR\XalgrowHR\obj\Debug\net8.0\ref\XalgrowHR.dll
+C:\XalgrowHR\XalgrowHR\obj\Debug\net8.0\XalgrowHR.sourcelink.json
+C:\XalgrowHR\XalgrowHR\bin\Debug\net8.0\BCrypt.Net-Next.dll
