@@ -1,5 +1,4 @@
 using Microsoft.EntityFrameworkCore;
-using BCrypt.Net; // To handle password hashing
 using System.Threading.Tasks;
 using XalgrowHR.Models;
 using XalgrowHR.Data;
@@ -20,31 +19,30 @@ namespace XalgrowHR.Services
         {
             var user = await _context.Users.SingleOrDefaultAsync(u => u.Username == username);
 
-            // Check if user exists and password matches
             if (user == null || !BCrypt.Net.BCrypt.Verify(password, user.PasswordHash))
             {
-                // Invalid username or password
-                return null;
+                return null; // Invalid username or password
             }
 
-            // Return the authenticated user
             return user;
+        }
+
+        // Method to get a user by username
+        public async Task<User?> GetUserByUsernameAsync(string username)
+        {
+            return await _context.Users.SingleOrDefaultAsync(u => u.Username == username);
         }
 
         // Method to register a new user
         public async Task<bool> RegisterUser(string username, string email, string password)
         {
-            // Check if the username or email already exists in the database
             if (await _context.Users.AnyAsync(u => u.Username == username || u.Email == email))
             {
-                // Username or email already exists
-                return false;
+                return false; // Username or email already exists
             }
 
-            // Hash the password before storing it in the database
             var passwordHash = BCrypt.Net.BCrypt.HashPassword(password);
 
-            // Create a new user object with the provided details
             var newUser = new User
             {
                 Username = username,
@@ -52,12 +50,17 @@ namespace XalgrowHR.Services
                 PasswordHash = passwordHash,
             };
 
-            // Add the new user to the database
             _context.Users.Add(newUser);
             await _context.SaveChangesAsync();
 
-            // Registration successful
-            return true;
+            return true; // Registration successful
+        }
+
+        // Method to update the user (e.g., to save the refresh token)
+        public async Task UpdateUserAsync(User user)
+        {
+            _context.Users.Update(user);
+            await _context.SaveChangesAsync();
         }
     }
 }
